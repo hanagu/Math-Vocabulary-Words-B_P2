@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Math Quiz: Geometry, Graphs & Models</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body { font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #0f172a; }
+    
+    /* Input styling */
+    .blank-input {
+      border: none;
+      border-bottom: 3px solid #94a3b8;
+      background-color: #f1f5f9;
+      outline: none;
+      text-align: center;
+      font-weight: 800;
+      color: #4c1d95;
+      padding: 4px 12px;
+      margin: 0 6px;
+      min-width: 140px;
+      width: auto;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.3s;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.25rem;
+      text-transform: lowercase;
+    }
+    .blank-input:focus {
+      border-bottom-color: #7c3aed;
+      background-color: #f3e8ff;
+    }
+    .blank-input:disabled {
+      background-color: transparent;
+    }
+    .blank-input.correct {
+      border-bottom-color: #16a34a;
+      color: #166534;
+      background-color: #dcfce7;
+    }
+    .blank-input.incorrect {
+      border-bottom-color: #dc2626;
+      color: #991b1b;
+      background-color: #fee2e2;
+      text-decoration: line-through;
+    }
+
+    .math-font { font-family: 'Courier New', Courier, monospace; font-weight: 900; letter-spacing: 1px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Universal CSS Watermark -->
+  <div style="position: fixed; top: 16px; right: 20px; color: rgba(251, 146, 60, 0.6); font-weight: 900; font-size: 1.1rem; text-align: right; line-height: 1.3; letter-spacing: 0.05em; pointer-events: none; user-select: none; z-index: 9999;">
+    ELL Class<br>with Ms. Hana
+  </div>
+
+  <div id="root" class="flex-grow flex flex-col"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- SVG Visual Aid Component (Geometry, Graphs, Models Only) ---
+    const VisualAid = ({ type }) => {
+      const renderGraphic = () => {
+        switch(type) {
+          // Graphs
+          case 'bar_graph': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="10" y1="10" x2="10" y2="90" stroke="#334155" strokeWidth="4"/><line x1="10" y1="90" x2="90" y2="90" stroke="#334155" strokeWidth="4"/><rect x="20" y="50" width="15" height="40" fill="#ef4444"/><rect x="45" y="20" width="15" height="70" fill="#7c3aed"/><rect x="70" y="60" width="15" height="30" fill="#10b981"/></svg>;
+          case 'pie_chart': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="50" r="40" fill="#7c3aed"/><path d="M 50 50 L 50 10 A 40 40 0 0 1 90 50 Z" fill="#ef4444"/><path d="M 50 50 L 90 50 A 40 40 0 0 1 20 76 Z" fill="#10b981"/></svg>;
+          case 'line_graph': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="10" y1="10" x2="10" y2="90" stroke="#334155" strokeWidth="4"/><line x1="10" y1="90" x2="90" y2="90" stroke="#334155" strokeWidth="4"/><polyline points="20,80 40,40 60,60 80,20" fill="none" stroke="#ef4444" strokeWidth="4" strokeLinejoin="round"/><circle cx="20" cy="80" r="4" fill="#1e293b"/><circle cx="40" cy="40" r="4" fill="#1e293b"/><circle cx="60" cy="60" r="4" fill="#1e293b"/><circle cx="80" cy="20" r="4" fill="#1e293b"/></svg>;
+
+          // Basic Lines & Points
+          case 'point': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="50" r="8" fill="#ef4444"/></svg>;
+          case 'line': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="15" y1="50" x2="85" y2="50" stroke="#4c1d95" strokeWidth="6"/><polygon points="85,44 97,50 85,56" fill="#4c1d95"/><polygon points="15,44 3,50 15,56" fill="#4c1d95"/></svg>;
+          case 'line_segment': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="20" y1="50" x2="80" y2="50" stroke="#4c1d95" strokeWidth="6"/><circle cx="20" cy="50" r="5" fill="#ef4444"/><circle cx="80" cy="50" r="5" fill="#ef4444"/></svg>;
+          case 'ray': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="20" y1="50" x2="85" y2="50" stroke="#4c1d95" strokeWidth="6"/><circle cx="20" cy="50" r="5" fill="#ef4444"/><polygon points="85,44 97,50 85,56" fill="#4c1d95"/></svg>;
+          case 'intersecting': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="20" y1="20" x2="80" y2="80" stroke="#4c1d95" strokeWidth="6" strokeLinecap="round"/><line x1="20" y1="80" x2="80" y2="20" stroke="#4c1d95" strokeWidth="6" strokeLinecap="round"/></svg>;
+          case 'parallel': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="10" y1="40" x2="90" y2="40" stroke="#4c1d95" strokeWidth="6" strokeLinecap="round"/><line x1="10" y1="60" x2="90" y2="60" stroke="#4c1d95" strokeWidth="6" strokeLinecap="round"/></svg>;
+          case 'perpendicular': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="50" y1="10" x2="50" y2="90" stroke="#4c1d95" strokeWidth="6" strokeLinecap="round"/><line x1="10" y1="50" x2="90" y2="50" stroke="#4c1d95" strokeWidth="6" strokeLinecap="round"/><polyline points="50,30 70,30 70,50" fill="none" stroke="#ef4444" strokeWidth="5" strokeLinejoin="round"/></svg>;
+          case 'diagonal': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><rect x="20" y="30" width="60" height="40" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4"/><line x1="20" y1="30" x2="80" y2="70" stroke="#ef4444" strokeWidth="5" strokeDasharray="5,5"/></svg>;
+
+          // Angles
+          case 'acute_angle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><path d="M 90 80 L 20 80 L 60 20" fill="none" stroke="#4c1d95" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/><path d="M 50 80 A 30 30 0 0 0 40 50" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/></svg>;
+          case 'obtuse_angle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><path d="M 90 80 L 40 80 L 10 30" fill="none" stroke="#4c1d95" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/><path d="M 65 80 A 25 25 0 0 1 25 55" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/></svg>;
+          case 'right_angle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="20,80 80,80 20,20" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="5" strokeLinejoin="round" /><polyline points="20,55 45,55 45,80" fill="none" stroke="#ef4444" strokeWidth="5" strokeLinejoin="round"/></svg>;
+          case 'straight_angle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="10" y1="50" x2="90" y2="50" stroke="#4c1d95" strokeWidth="5" strokeLinecap="round"/><circle cx="50" cy="50" r="4" fill="#ef4444"/><path d="M 30 50 A 20 20 0 0 1 70 50" fill="none" stroke="#ef4444" strokeWidth="4"/></svg>;
+          case 'adjacent_angle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><path d="M 90 80 L 20 80 L 60 20" fill="none" stroke="#4c1d95" strokeWidth="4"/><path d="M 20 80 L 40 10" fill="none" stroke="#4c1d95" strokeWidth="4"/><path d="M 40 80 A 20 20 0 0 0 35 55" fill="none" stroke="#ef4444" strokeWidth="4"/><path d="M 50 80 A 30 30 0 0 0 45 35" fill="none" stroke="#10b981" strokeWidth="4"/></svg>;
+
+          // Triangles
+          case 'equilateral_triangle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="50,15 15,85 85,85" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4" strokeLinejoin="round"/><line x1="30" y1="50" x2="35" y2="50" stroke="#ef4444" strokeWidth="4"/><line x1="65" y1="50" x2="70" y2="50" stroke="#ef4444" strokeWidth="4"/><line x1="50" y1="83" x2="50" y2="87" stroke="#ef4444" strokeWidth="4"/></svg>;
+          case 'isosceles_triangle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="50,10 30,90 70,90" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4" strokeLinejoin="round"/><line x1="38" y1="50" x2="42" y2="50" stroke="#ef4444" strokeWidth="4"/><line x1="58" y1="50" x2="62" y2="50" stroke="#ef4444" strokeWidth="4"/></svg>;
+          case 'scalene_triangle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="20,80 90,80 40,20" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4" strokeLinejoin="round"/></svg>;
+
+          // Quadrilaterals
+          case 'rectangle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><rect x="15" y="30" width="70" height="40" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4"/><polyline points="15,40 25,40 25,30" fill="none" stroke="#ef4444" strokeWidth="3"/></svg>;
+          case 'square': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><rect x="25" y="25" width="50" height="50" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4"/><polyline points="25,35 35,35 35,25" fill="none" stroke="#ef4444" strokeWidth="3"/></svg>;
+          case 'rhombus': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="50,10 85,50 50,90 15,50" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4" strokeLinejoin="round"/></svg>;
+          case 'parallelogram': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="30,25 90,25 70,75 10,75" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4" strokeLinejoin="round"/></svg>;
+          case 'trapezoid': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="30,30 70,30 90,80 10,80" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4" strokeLinejoin="round"/></svg>;
+
+          // Circles & Parts
+          case 'circle': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="50" r="40" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4"/></svg>;
+          case 'radius': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="50" r="40" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4"/><line x1="50" y1="50" x2="90" y2="50" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/><circle cx="50" cy="50" r="5" fill="#ef4444"/></svg>;
+          case 'diameter': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="50" r="40" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="4"/><line x1="10" y1="50" x2="90" y2="50" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/><circle cx="50" cy="50" r="4" fill="#4c1d95"/></svg>;
+          case 'arc': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="50" r="40" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="2"/><path d="M 90 50 A 40 40 0 0 0 50 10" fill="none" stroke="#ef4444" strokeWidth="8"/></svg>;
+
+          // Measurements & Coordinate Plane
+          case 'perimeter': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><rect x="20" y="20" width="60" height="60" fill="none" stroke="#ef4444" strokeWidth="6"/><path d="M 25 15 L 75 15" stroke="#ef4444" strokeWidth="4" strokeDasharray="3 3"/></svg>;
+          case 'area': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><rect x="20" y="20" width="60" height="60" fill="#fef08a" stroke="#4c1d95" strokeWidth="4"/></svg>;
+          case 'coordinate_plane': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><line x1="50" y1="10" x2="50" y2="90" stroke="#4c1d95" strokeWidth="4"/><line x1="10" y1="50" x2="90" y2="50" stroke="#4c1d95" strokeWidth="4"/><polygon points="50,5 55,15 45,15" fill="#4c1d95"/><polygon points="95,50 85,45 85,55" fill="#4c1d95"/><circle cx="70" cy="30" r="5" fill="#ef4444"/></svg>;
+
+          // 3D Shapes
+          case 'cube': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><path d="M30 30 L70 30 L70 70 L30 70 Z" fill="#c4b5fd" stroke="#4c1d95" strokeWidth="3"/><path d="M30 30 L45 15 L85 15 L70 30" fill="#e9d5ff" stroke="#4c1d95" strokeWidth="3"/><path d="M70 70 L85 55 L85 15 L70 30" fill="#a78bfa" stroke="#4c1d95" strokeWidth="3"/></svg>;
+          case 'cylinder': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><path d="M 20 25 L 20 75 A 30 12 0 0 0 80 75 L 80 25 Z" fill="#c4b5fd" stroke="#4c1d95" strokeWidth="3" strokeLinejoin="round"/><path d="M 20 75 A 30 12 0 0 1 80 75" fill="none" stroke="#4c1d95" strokeWidth="3" strokeDasharray="4 4" /><ellipse cx="50" cy="25" rx="30" ry="12" fill="#e9d5ff" stroke="#4c1d95" strokeWidth="3" /></svg>;
+          case 'sphere': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-lg"><defs><radialGradient id="sphereGrad" cx="30%" cy="30%" r="70%"><stop offset="0%" stopColor="#e9d5ff"/><stop offset="100%" stopColor="#6d28d9"/></radialGradient></defs><circle cx="50" cy="50" r="40" fill="url(#sphereGrad)"/></svg>;
+          case 'cone': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><path d="M20 75 L50 15 L80 75 Z" fill="#c4b5fd" stroke="#4c1d95" strokeWidth="3"/><ellipse cx="50" cy="75" rx="30" ry="10" fill="#e9d5ff" stroke="#4c1d95" strokeWidth="3"/></svg>;
+          case 'prism': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="30,80 70,80 50,40" fill="#c4b5fd" stroke="#4c1d95" strokeWidth="3"/><polygon points="50,40 70,80 90,60 70,20" fill="#e9d5ff" stroke="#4c1d95" strokeWidth="3"/></svg>;
+          case 'pyramid': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><polygon points="10,75 50,85 90,75 50,15" fill="#e9d5ff" stroke="#4c1d95" strokeWidth="3"/><line x1="50" y1="85" x2="50" y2="15" stroke="#4c1d95" strokeWidth="3"/></svg>;
+
+          // Models & Tools
+          case 'array': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md">{[20,40,60,80].map(x => [20,40,60,80].map(y => <circle key={`${x}${y}`} cx={x} cy={y} r="6" fill="#7c3aed" />))}</svg>;
+          case 'number_bond': return <svg viewBox="0 0 100 100" className="w-32 h-32 mx-auto drop-shadow-md"><circle cx="50" cy="20" r="15" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="3"/><text x="50" y="25" textAnchor="middle" fontSize="12" fontWeight="bold">10</text><line x1="40" y1="32" x2="25" y2="58" stroke="#334155" strokeWidth="3"/><circle cx="20" cy="70" r="15" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="3"/><text x="20" y="75" textAnchor="middle" fontSize="12" fontWeight="bold">6</text><line x1="60" y1="32" x2="75" y2="58" stroke="#334155" strokeWidth="3"/><circle cx="80" cy="70" r="15" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="3"/><text x="80" y="75" textAnchor="middle" fontSize="12" fontWeight="bold">4</text></svg>;
+          case 'tape_diagram': return <svg viewBox="0 0 100 40" className="w-48 h-20 mx-auto drop-shadow-md"><rect x="10" y="10" width="80" height="20" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="3"/><line x1="30" y1="10" x2="30" y2="30" stroke="#4c1d95" strokeWidth="3"/><line x1="50" y1="10" x2="50" y2="30" stroke="#4c1d95" strokeWidth="3"/><line x1="70" y1="10" x2="70" y2="30" stroke="#4c1d95" strokeWidth="3"/></svg>;
+          case 'area_model': return <svg viewBox="0 0 100 80" className="w-32 h-24 mx-auto drop-shadow-md"><rect x="10" y="10" width="80" height="60" fill="#f3e8ff" stroke="#4c1d95" strokeWidth="3"/><line x1="60" y1="10" x2="60" y2="70" stroke="#4c1d95" strokeWidth="3"/><line x1="10" y1="30" x2="90" y2="30" stroke="#4c1d95" strokeWidth="3"/></svg>;
+          case 'protractor': return <svg viewBox="0 0 100 60" className="w-40 h-24 mx-auto drop-shadow-md"><path d="M 10 50 A 40 40 0 0 1 90 50 Z" fill="#e2e8f0" stroke="#334155" strokeWidth="3"/><path d="M 25 50 A 25 25 0 0 1 75 50 Z" fill="none" stroke="#334155" strokeWidth="2"/><line x1="50" y1="50" x2="50" y2="10" stroke="#334155" strokeWidth="2"/><line x1="50" y1="50" x2="22" y2="22" stroke="#334155" strokeWidth="2"/><line x1="50" y1="50" x2="78" y2="22" stroke="#334155" strokeWidth="2"/><circle cx="50" cy="50" r="3" fill="#1e293b"/><line x1="5" y1="50" x2="95" y2="50" stroke="#334155" strokeWidth="3"/></svg>;
+          case 'ruler': return <svg viewBox="0 0 100 40" className="w-48 h-20 mx-auto drop-shadow-md"><rect x="10" y="10" width="80" height="20" fill="#fef08a" stroke="#ca8a04" strokeWidth="3"/>{[20,30,40,50,60,70,80].map(x=> <line key={x} x1={x} y1="10" x2={x} y2="15" stroke="#ca8a04" strokeWidth="2"/>)}</svg>;
+          case 'compass': return <svg viewBox="0 0 100 100" className="w-24 h-32 mx-auto drop-shadow-md"><line x1="50" y1="20" x2="30" y2="80" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round"/><line x1="50" y1="20" x2="70" y2="80" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round"/><circle cx="50" cy="20" r="8" fill="#475569"/><rect x="28" y="80" width="4" height="10" fill="#1e293b"/><rect x="68" y="80" width="4" height="10" fill="#ef4444"/></svg>;
+          
+          default: return null;
+        }
+      };
+
+      return <div className="my-6">{renderGraphic()}</div>;
+    };
+
+    // --- PURE GEOMETRY, GRAPHS & MODELS QUIZ DATA (NO OVERLAP WITH LIST 1) ---
+    const rawQuizData = [
+      // GRAPHS & DATA
+      { id: 1, type: "visual_fill", visual: "bar_graph", text: "Mr. Davis asked his class about their favorite fruits and drew colorful columns to compare them. He made a ___ graph.", answer: "bar" },
+      { id: 2, type: "visual_fill", visual: "pie_chart", text: "To show that half of his allowance goes to savings, Tom drew a circle and shaded half of it. This is a ___ chart.", answer: "pie" },
+      { id: 3, type: "visual_fill", visual: "line_graph", text: "A news channel connected dots on a grid to show how the temperature went up and down over the week. It is a ___ graph.", answer: "line" },
+      { id: 4, type: "fill", text: "Sarah scored 80, 90, and 100. To find her average, she added them up and divided by 3. She calculated the ___.", answer: "mean" },
+      { id: 5, type: "fill", text: "If you line up five students from shortest to tallest, the height of the person standing exactly in the middle is the ___.", answer: "median" },
+      { id: 6, type: "fill", text: "In a shoe store, size 7 is sold the most often. Because it appears most frequently in the data, size 7 is the ___.", answer: "mode" },
+      { id: 7, type: "fill", text: "The oldest person in the room is 50 and the youngest is 10. The difference between their ages is 40, which is the ___.", answer: "range" },
+
+      // GEOMETRY (Angles & Lines)
+      { id: 8, type: "visual_fill", visual: "acute_angle", text: "The beak of a bird opens slightly, forming a sharp angle smaller than a square corner. It is an ___ angle.", answer: "acute" },
+      { id: 9, type: "visual_fill", visual: "obtuse_angle", text: "A folding fan is opened very wide, past 90 degrees but not totally flat. It forms an ___ angle.", answer: "obtuse" },
+      { id: 10, type: "visual_fill", visual: "right_angle", text: "The corner of your TV screen makes a perfect L-shape. It measures exactly 90 degrees, so it is a ___ angle.", answer: "right" },
+      { id: 11, type: "visual_fill", visual: "straight_angle", text: "When a clock reads exactly 6:00, the hands make a perfectly flat line. This forms a ___ angle.", answer: "straight" },
+      { id: 12, type: "fill", text: "When you turn a skateboard completely around, you spin 360 of these small units. Each unit of rotation is a ___.", answer: "degree" },
+      { id: 13, type: "visual_mcq", visual: "adjacent_angle", text: "Two parking spaces share the exact same painted line between them. In geometry, angles that share a side are...", answer: "Adjacent angles", options: ["Adjacent angles", "Vertical angles", "Straight angles"] },
+      { id: 14, type: "fill", text: "When scissors are opened, the angles exactly opposite each other across the screw are equal. These are ___ angles.", answer: "vertical" },
+      { id: 15, type: "fill", text: "If two different angles put together perfectly fit into a 90-degree square corner, they are ___ angles.", answer: "complementary" },
+      { id: 16, type: "fill", text: "If you put two angles together and they make a perfectly straight, flat line (180 degrees), they are ___ angles.", answer: "supplementary" },
+      { id: 17, type: "fill", text: "If you draw a triangle on the ground, the safe space trapped inside the boundary lines is called the ___ of an angle.", answer: "interior" },
+      
+      // GEOMETRY (Points & Lines)
+      { id: 18, type: "visual_fill", visual: "point", text: "On a treasure map, the exact location of the gold is marked with a tiny dot. In math, this exact location is a ___.", answer: "point" },
+      { id: 19, type: "visual_mcq", visual: "line", text: "A laser beam shoots perfectly straight forever in both directions. In math, this endless path is a...", answer: "Line", options: ["Line segment", "Ray", "Line"] },
+      { id: 20, type: "visual_mcq", visual: "line_segment", text: "A piece of spaghetti has a clear start and an end. A straight path that stops at both ends is a...", answer: "Line segment", options: ["Line segment", "Ray", "Line"] },
+      { id: 21, type: "visual_mcq", visual: "ray", text: "A flashlight shoots a beam of light from the bulb that goes on forever. This is like a...", answer: "Ray", options: ["Line segment", "Ray", "Line"] },
+      { id: 22, type: "visual_mcq", visual: "parallel", text: "The two metal rails of a train track always stay the same distance apart and never touch. They are...", answer: "Parallel lines", options: ["Parallel lines", "Perpendicular lines", "Intersecting lines"] },
+      { id: 23, type: "visual_mcq", visual: "perpendicular", text: "A tall building stands straight up from the flat ground, making a 90-degree corner. The building and ground are...", answer: "Perpendicular lines", options: ["Parallel lines", "Perpendicular lines", "Collinear lines"] },
+      { id: 24, type: "visual_fill", visual: "intersecting", text: "Two roads cross each other at a traffic light forming an X. In math, we call these ___ lines.", answer: "intersecting" },
+      { id: 25, type: "fill", text: "If three birds sit perfectly aligned on the exact same straight telephone wire, those birds are ___.", answer: "collinear" },
+
+      // GEOMETRY (Polygons & Triangles)
+      { id: 26, type: "fill", text: "In your math book, it might say 'Find the area of the ___ below.' This is a general word for any shape or drawing.", answer: "figure" },
+      { id: 27, type: "fill", text: "A stop sign is a fully closed flat shape with straight edges. Any closed shape with straight sides is a ___.", answer: "polygon" },
+      { id: 28, type: "fill", text: "A 'Yield' warning sign on the road has three straight sides and three corners. It is shaped like a ___.", answer: "triangle" },
+      { id: 29, type: "visual_fill", visual: "equilateral_triangle", text: "A pool ball rack is a triangle where all 3 sides are exactly the same length. It is an ___ triangle.", answer: "equilateral" },
+      { id: 30, type: "visual_fill", visual: "isosceles_triangle", text: "A slice of pie has 2 long sides that are the same length and 1 short crust side. It is an ___ triangle.", answer: "isosceles" },
+      { id: 31, type: "visual_fill", visual: "scalene_triangle", text: "If you draw a triangle where every single side is a completely different length, it is a ___ triangle.", answer: "scalene" },
+      { id: 32, type: "fill", text: "A sandwich cut diagonally across a square piece of bread creates a 90-degree corner. It is a ___ triangle.", answer: "right" },
+      { id: 33, type: "fill", text: "If every corner of a triangle is sharp and smaller than 90 degrees, it is an ___ triangle.", answer: "acute" },
+      { id: 34, type: "fill", text: "A roof truss has one very wide, flat angle at the very top. It forms an ___ triangle.", answer: "obtuse" },
+      
+      // GEOMETRY (Quadrilaterals)
+      { id: 35, type: "fill", text: "A computer screen has exactly 4 straight sides. Any polygon with 4 sides is a ___.", answer: "quadrilateral" },
+      { id: 36, type: "visual_fill", visual: "parallelogram", text: "An eraser pushed sideways so it leans over, but its opposite sides are still parallel, is a ___.", answer: "parallelogram" },
+      { id: 37, type: "visual_fill", visual: "rectangle", text: "A standard piece of printer paper has 4 right angles and pairs of equal opposite sides. It is a ___.", answer: "rectangle" },
+      { id: 38, type: "visual_fill", visual: "rhombus", text: "A diamond shape on a playing card has 4 equal sides but no right angles. It is a ___.", answer: "rhombus" },
+      { id: 39, type: "visual_fill", visual: "square", text: "A chessboard tile has 4 equal sides and 4 perfect square corners. It is a ___.", answer: "square" },
+      { id: 40, type: "visual_fill", visual: "trapezoid", text: "A popcorn box is wider at the top and narrower at the bottom, with only one pair of parallel sides. It is a ___.", answer: "trapezoid" },
+      { id: 41, type: "visual_fill", visual: "diagonal", text: "If you walk straight from the bottom-left corner of a rectangular park to the top-right corner, you walked a ___ path.", answer: "diagonal" },
+      { id: 42, type: "fill", text: "If you fold a butterfly drawing in half, both sides match perfectly. The fold is a line of ___.", answer: "symmetry" },
+
+      // GEOMETRY (Circles)
+      { id: 43, type: "visual_fill", visual: "circle", text: "A coin or a bicycle wheel is perfectly round with no corners. It is a ___.", answer: "circle" },
+      { id: 44, type: "visual_fill", visual: "radius", text: "The distance from the exact center point of a pizza to its outer crust is its ___.", answer: "radius" },
+      { id: 45, type: "visual_fill", visual: "diameter", text: "If you cut a cake straight across the middle from one edge to the opposite edge, the length of the cut is the ___.", answer: "diameter" },
+      { id: 46, type: "visual_fill", visual: "arc", text: "A rainbow forms a curved shape in the sky. In math, a curved part of the edge of a circle is an ___.", answer: "arc" },
+      { id: 47, type: "fill", text: "If you want to measure just the curved crust of a slice of pizza, you are finding the length of an ___.", answer: "arc" },
+
+      // GEOMETRY (Measurements & Coordinate Plane)
+      { id: 48, type: "visual_fill", visual: "perimeter", text: "A farmer needs to build a fence all the way around his field. He must measure the ___.", answer: "perimeter" },
+      { id: 49, type: "visual_fill", visual: "area", text: "Mary wants to buy a carpet to cover the entire floor of her bedroom. She needs to calculate the ___.", answer: "area" },
+      { id: 50, type: "visual_fill", visual: "coordinate_plane", text: "A map with grid lines running left-to-right (x-axis) and up-and-down (y-axis) is a ___ plane.", answer: "coordinate" },
+      { id: 51, type: "fill", text: "When you start walking on a grid map, you begin at the central point (0,0), which is called the ___.", answer: "origin" },
+      { id: 52, type: "fill", text: "To find the pirate treasure, go to the grid point (4, 7). These two numbers in parentheses are an ___ pair.", answer: "ordered" },
+      { id: 53, type: "mcq", text: "On a coordinate plane, the horizontal line going left-to-right is called the...", answer: "X-axis", options: ["X-axis", "Y-axis", "Origin"] },
+      { id: 54, type: "mcq", text: "On a coordinate plane, the vertical line going up-and-down is called the...", answer: "Y-axis", options: ["X-axis", "Y-axis", "Origin"] },
+
+      // 3D SHAPES (Solid Figures)
+      { id: 55, type: "mcq", text: "Shapes that are not flat but take up space (like a ball or box) are called...", answer: "3D Shapes / Solid figures", options: ["3D Shapes / Solid figures", "Polygons", "Quadrilaterals"] },
+      { id: 56, type: "visual_fill", visual: "cube", text: "A sugar block or a six-sided die has 6 identical square faces. It is a ___.", answer: "cube" },
+      { id: 57, type: "visual_fill", visual: "cylinder", text: "A battery or a roll of paper towels has flat round ends and straight curved sides. It is a ___.", answer: "cylinder" },
+      { id: 58, type: "visual_fill", visual: "sphere", text: "A globe or a marble is perfectly round in all 3D directions. It is a ___.", answer: "sphere" },
+      { id: 59, type: "visual_fill", visual: "cone", text: "A traffic pylon is wide at the bottom and has a sharp point at the top. It is a ___.", answer: "cone" },
+      { id: 60, type: "visual_fill", visual: "prism", text: "A long Toblerone chocolate box has flat rectangular sides and triangular ends. It is a triangular ___.", answer: "prism" },
+      { id: 61, type: "visual_fill", visual: "pyramid", text: "The ancient buildings in Egypt have a square base and 4 triangular sides meeting at the top. Each is a ___.", answer: "pyramid" },
+      { id: 62, type: "fill", text: "To find out how much water is needed to fill a swimming pool, you calculate the pool's ___.", answer: "volume" },
+      { id: 63, type: "fill", text: "The flat part of a tissue box where the brand name is printed is called a ___.", answer: "face" },
+      { id: 64, type: "fill", text: "The sharp, straight line where two walls of a room meet is called an ___.", answer: "edge" },
+      { id: 65, type: "fill", text: "The pointy corner of a desk where three edges meet is a ___.", answer: "vertex" },
+
+      // MODELS & TOOLS
+      { id: 66, type: "visual_mcq", visual: "array", text: "A baking tray holds muffins in 3 neat rows and 4 columns. This grid pattern is an...", answer: "Array", options: ["Array", "Tape diagram", "Number bond"] },
+      { id: 67, type: "fill", text: "An egg carton arranged neatly is an example of a ___ array.", answer: "rectangular" },
+      { id: 68, type: "fill", text: "In a movie theater, the lines of seats that go across horizontally from left to right form the ___.", answer: "rows" },
+      { id: 69, type: "fill", text: "The tall stone pillars holding up a Greek temple stand straight up and down, just like ___ in a spreadsheet.", answer: "columns" },
+      { id: 70, type: "visual_mcq", visual: "number_bond", text: "A math drawing showing the number 10 connected to 6 and 4 helps us see parts and a whole. It is a...", answer: "Number bond", options: ["Number bond", "Area model", "Coordinate plane"] },
+      { id: 71, type: "visual_mcq", visual: "tape_diagram", text: "To solve a word problem, Mike drew a long rectangle and split it into boxes to represent parts. He drew a...", answer: "Tape diagram", options: ["Tape diagram", "Bar diagram", "Line plot"] },
+      { id: 72, type: "fill", text: "A diagram similar to a tape diagram that uses rectangles to represent quantities is a ___ diagram.", answer: "bar" },
+      { id: 73, type: "visual_mcq", visual: "area_model", text: "Drawing a large rectangle and splitting it into smaller boxes to solve 12 × 14 is using an...", answer: "Area model", options: ["Area model", "Array", "Bar graph"] },
+      { id: 74, type: "visual_fill", visual: "protractor", text: "To check if the corner of a wooden picture frame is exactly 45 degrees, a carpenter uses a ___.", answer: "protractor" },
+      { id: 75, type: "visual_fill", visual: "ruler", text: "To draw a perfectly straight margin line exactly 5 inches from the edge of the paper, use a ___.", answer: "ruler" },
+      { id: 76, type: "visual_fill", visual: "compass", text: "To draw a perfect, smooth circle on a piece of paper, you use a tool with a sharp point and pencil called a ___.", answer: "compass" },
+      { id: 77, type: "fill", text: "How wide an angle opens is called the degree ___ of an angle.", answer: "measure" }
+    ];
+
+    // Shuffle Helper
+    const shuffle = (array) => {
+      let arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    function App() {
+      // Core States
+      const [quizList, setQuizList] = useState([]);
+      const [mistakesQueue, setMistakesQueue] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [round, setRound] = useState(1);
+      const [isDone, setIsDone] = useState(false);
+      const topRef = useRef(null);
+
+      // Current Batch States (5 questions per page)
+      const BATCH_SIZE = 5;
+      const [currentBatch, setCurrentBatch] = useState([]);
+      const [currentWordBank, setCurrentWordBank] = useState([]);
+      
+      // User Interaction
+      const [answers, setAnswers] = useState({});
+      const [hasChecked, setHasChecked] = useState(false);
+
+      // 1. Initialize Game
+      useEffect(() => {
+        setQuizList(shuffle(rawQuizData));
+      }, []);
+
+      // 2. Load Current Batch
+      useEffect(() => {
+        if (quizList.length === 0) return;
+        
+        const batch = quizList.slice(currentIndex, currentIndex + BATCH_SIZE);
+        setCurrentBatch(batch);
+        
+        // Generate Word Bank only from "fill" and "visual_fill" questions
+        const fillQuestions = batch.filter(q => q.type.includes('fill'));
+        const words = fillQuestions.map(q => q.answer);
+        const uniqueWords = [...new Set(words)].sort();
+        setCurrentWordBank(uniqueWords);
+        
+        setAnswers({});
+        setHasChecked(false);
+      }, [quizList, currentIndex]);
+
+      const handleInput = (id, value) => {
+        if (hasChecked) return;
+        setAnswers(prev => ({ ...prev, [id]: value }));
+      };
+
+      const handleCheck = () => {
+        let currentMistakes = [];
+        
+        currentBatch.forEach(q => {
+          const userAnswer = (answers[q.id] || "").trim().toLowerCase();
+          const correctAnswer = q.answer.trim().toLowerCase();
+          
+          if (userAnswer !== correctAnswer) {
+            currentMistakes.push(q);
+          }
+        });
+
+        setMistakesQueue(prev => {
+          const newQueue = [...prev];
+          currentMistakes.forEach(mistake => {
+            if (!newQueue.find(w => w.id === mistake.id)) newQueue.push(mistake);
+          });
+          return newQueue;
+        });
+
+        setHasChecked(true);
+        if(topRef.current) topRef.current.scrollIntoView({ behavior: 'smooth' });
+      };
+
+      const handleNext = () => {
+        const nextIndex = currentIndex + BATCH_SIZE;
+        
+        if (nextIndex < quizList.length) {
+          setCurrentIndex(nextIndex);
+          window.scrollTo(0, 0);
+        } else {
+          if (mistakesQueue.length > 0) {
+            setQuizList(shuffle([...mistakesQueue]));
+            setMistakesQueue([]);
+            setCurrentIndex(0);
+            setRound(prev => prev + 1);
+            window.scrollTo(0, 0);
+          } else {
+            setIsDone(true);
+          }
+        }
+      };
+
+      const handleRestart = () => {
+        setQuizList(shuffle(rawQuizData));
+        setMistakesQueue([]);
+        setCurrentIndex(0);
+        setIsDone(false);
+        setRound(1);
+      };
+
+      if (quizList.length === 0) return <div className="p-8 text-center font-bold text-xl">Building Quiz Environment...</div>;
+
+      if (isDone) {
+        return (
+          <div className="flex flex-col items-center justify-center flex-grow bg-emerald-50 p-6">
+            <div className="text-8xl mb-8 animate-bounce">📐</div>
+            <h1 className="text-5xl sm:text-6xl font-extrabold text-emerald-800 mb-6 text-center drop-shadow-sm">Geometry Master!</h1>
+            <p className="text-2xl text-emerald-700 mb-10 font-bold text-center">You successfully conquered all visual and text challenges.</p>
+            <button 
+              onClick={handleRestart}
+              className="px-10 py-5 bg-purple-600 text-white rounded-2xl shadow-xl hover:bg-purple-700 transition font-black text-2xl"
+            >
+              Play Again!
+            </button>
+          </div>
+        );
+      }
+
+      const totalBatches = Math.ceil(quizList.length / BATCH_SIZE);
+      const currentBatchNum = Math.floor(currentIndex / BATCH_SIZE) + 1;
+
+      return (
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 w-full" ref={topRef}>
+          
+          {/* Header & Progress */}
+          <div className="text-center mb-8 bg-white p-6 rounded-3xl shadow-md border-b-4 border-purple-500">
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-800 mb-2">Geometry & Graphs Application</h1>
+            <p className="text-purple-600 font-bold text-lg">
+              {round > 1 
+                ? <span className="text-red-600 bg-red-100 px-4 py-1 rounded-full animate-pulse">Review Round {round} : Fix your mistakes!</span>
+                : "Analyze the pictures and sentences to find the correct mathematical terms."}
+            </p>
+            
+            <div className="mt-6 flex items-center justify-center gap-3 text-sm font-extrabold text-slate-400 uppercase tracking-widest bg-slate-50 py-2 rounded-xl">
+              <span className="text-purple-500">Page {currentBatchNum} of {totalBatches}</span>
+              <span>•</span>
+              <span>Questions {currentIndex + 1} - {Math.min(currentIndex + BATCH_SIZE, quizList.length)}</span>
+              <span>•</span>
+              <span className="text-emerald-500">Total {quizList.length}</span>
+            </div>
+            
+            <div className="w-full bg-slate-200 h-3 mt-4 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className={`h-full transition-all duration-500 ease-out ${round > 1 ? 'bg-red-500' : 'bg-purple-500'}`}
+                style={{ width: `${((currentBatchNum) / totalBatches) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Dynamic Word Bank */}
+          {currentWordBank.length > 0 && (
+            <div className="bg-emerald-50 rounded-3xl shadow-md border-2 border-emerald-200 p-6 mb-10 text-center relative pt-8">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-8 py-2 rounded-full font-black text-sm uppercase tracking-widest shadow-md">
+                Spelling Helper Bank
+              </div>
+              <div className="flex flex-wrap justify-center gap-3">
+                {currentWordBank.map((word, idx) => {
+                  const isUsed = Object.values(answers).some(val => val.trim().toLowerCase() === word.toLowerCase());
+                  return (
+                    <span 
+                      key={idx} 
+                      className={`px-5 py-2.5 font-bold text-lg rounded-2xl border-2 transition-all ${isUsed ? 'bg-white text-slate-300 border-slate-200 shadow-none' : 'bg-white text-emerald-800 border-emerald-300 shadow-sm hover:-translate-y-1'}`}
+                    >
+                      {word}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Question List */}
+          <div className="space-y-8 mb-12">
+            {currentBatch.map((q, idx) => {
+              const userAnswer = (answers[q.id] || "").trim().toLowerCase();
+              const correctAnswer = q.answer.trim().toLowerCase();
+              const isCorrect = userAnswer === correctAnswer;
+              const globalQNum = currentIndex + idx + 1;
+
+              // Determine border colors based on state
+              let cardStyle = "bg-white border-2 border-slate-200";
+              if (hasChecked) {
+                cardStyle = isCorrect ? "bg-green-50 border-4 border-green-400" : "bg-red-50 border-4 border-red-400";
+              }
+
+              return (
+                <div key={q.id} className={`rounded-3xl p-6 sm:p-10 shadow-lg transition-all duration-300 ${cardStyle}`}>
+                  
+                  {/* Visual Aid Rendering */}
+                  {q.visual && <VisualAid type={q.visual} />}
+
+                  {/* Question Text */}
+                  <div className="text-xl sm:text-2xl leading-relaxed text-slate-800 font-bold text-center mt-4 mb-6">
+                    <span className="inline-block bg-slate-800 text-white w-10 h-10 rounded-full text-center leading-10 text-xl shadow-md mr-4 align-middle">
+                      {globalQNum}
+                    </span>
+                    
+                    {/* Render text with blanks if it's a fill question */}
+                    {q.type.includes('fill') ? (
+                      <span className="align-middle">
+                        {q.text.split('___')[0]}
+                        <input 
+                          type="text" 
+                          className={`blank-input ${hasChecked ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
+                          value={answers[q.id] || ""}
+                          onChange={(e) => handleInput(q.id, e.target.value)}
+                          disabled={hasChecked}
+                          spellCheck="false"
+                          autoComplete="off"
+                          placeholder="type word"
+                        />
+                        {q.text.split('___')[1]}
+                      </span>
+                    ) : (
+                      <span className="align-middle" dangerouslySetInnerHTML={{ __html: q.text }} />
+                    )}
+                  </div>
+
+                  {/* MCQ Options Rendering */}
+                  {q.type.includes('mcq') && (
+                    <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+                      {q.options.map((opt, oIdx) => {
+                        const isSelected = answers[q.id] === opt;
+                        const isOptCorrect = opt.trim().toLowerCase() === correctAnswer;
+                        
+                        let btnStyle = "bg-white border-2 border-slate-300 text-slate-700 hover:border-purple-500 hover:bg-purple-50";
+                        
+                        if (hasChecked) {
+                          if (isOptCorrect) {
+                            btnStyle = "bg-green-500 border-green-600 text-white shadow-md font-black scale-[1.02]";
+                          } else if (isSelected && !isOptCorrect) {
+                            btnStyle = "bg-red-100 border-red-300 text-red-700 line-through opacity-60";
+                          } else {
+                            btnStyle = "bg-slate-50 border-slate-200 text-slate-400 opacity-40";
+                          }
+                        } else if (isSelected) {
+                          btnStyle = "bg-purple-600 border-purple-700 text-white font-bold shadow-md scale-[1.02]";
+                        }
+
+                        return (
+                          <button
+                            key={oIdx}
+                            disabled={hasChecked}
+                            onClick={() => handleInput(q.id, opt)}
+                            className={`text-center px-6 py-5 rounded-2xl text-xl sm:text-2xl transition-all duration-200 ${btnStyle}`}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                      {/* MCQ Feedback if left blank */}
+                      {hasChecked && !isCorrect && !answers[q.id] && (
+                        <div className="mt-4 text-red-700 font-bold bg-white px-6 py-4 rounded-2xl shadow-sm border-2 border-red-200 text-center text-xl">
+                          ✗ You didn't select an answer!
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fill-in Feedback */}
+                  {q.type.includes('fill') && hasChecked && !isCorrect && (
+                    <div className="mt-6 text-red-700 font-bold bg-white px-6 py-4 rounded-2xl shadow-sm border-2 border-red-200 text-center text-xl">
+                      ✗ The correct word is: <span className="text-white ml-2 px-4 py-1.5 bg-red-600 rounded-xl shadow-inner inline-block uppercase tracking-wider">{q.answer}</span>
+                    </div>
+                  )}
+
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-center mb-24">
+            {!hasChecked ? (
+              <button 
+                onClick={handleCheck}
+                className="px-14 py-6 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-slate-900 transition font-black text-2xl tracking-wide active:scale-95"
+              >
+                Submit Answers
+              </button>
+            ) : (
+              <button 
+                onClick={handleNext}
+                className="px-14 py-6 bg-purple-600 text-white rounded-full shadow-2xl hover:bg-purple-700 transition font-black text-2xl flex items-center justify-center gap-4 tracking-wide animate-bounce"
+              >
+                Next Challenges ➔
+              </button>
+            )}
+          </div>
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
